@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Capture Pro",
+  "version": "2.2.0",
+  "description": "Hover and click any element to copy its HTML + CSS, then let AI turn it into a clean, reusable component.",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Capture Pro",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "commands": {
+    "toggle-picker": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Toggle the element picker on the current tab"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body data-state="off">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="cs-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#F97316" /><stop offset="1" stop-color="#FB7185" />
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16.6" fill="url(#cs-grad)" />
+        <path d="M15.36 25.6V15.36H25.6M38.4 15.36h10.24V25.6M48.64 38.4v10.24H38.4M25.6 48.64H15.36V38.4"
+          fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+        <rect x="23.68" y="23.68" width="16.64" height="16.64" rx="3.2" fill="#fff" />
+      </svg>
+      <div>
+        <h1>Capture Pro</h1>
+        <p class="version" id="version"></p>
+      </div>
+    </div>
+    <button id="toggle" class="switch" role="switch" aria-checked="false" aria-label="Toggle picker">
+      <span class="knob"></span>
+    </button>
+  </header>
+
+  <div class="status">
+    <span class="status-dot"></span>
+    <div>
+      <strong id="statusTitle">Off</strong>
+      <span id="statusText">Turn it on, then click any element on the page.</span>
+    </div>
+  </div>
+
+  <div id="error" class="error" hidden></div>
+
+  <ol class="steps">
+    <li><span>1</span>Hover any element on the page</li>
+    <li><span>2</span>Click to capture · <kbd>Ctrl</kbd> + click for more</li>
+    <li><span>3</span>Press <b>✦ Make clean component</b></li>
+  </ol>
+
+  <div class="shortcut">
+    <span>Keyboard shortcut</span>
+    <button id="shortcut" class="kbd-btn" title="Change shortcut">…</button>
+  </div>
+
+  <footer>
+    <button id="options" class="link">Settings &amp; API key →</button>
+    <span class="faint"><kbd>Esc</kbd> exits</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capture Pro · Copy any design as clean HTML + CSS</title>
+  <meta name="description" content="A free Chrome extension: hover any element on any website, capture its HTML and CSS, and let Claude turn it into a clean, reusable component.">
+  <link rel="icon" type="image/png" href="icon32.png">
+  <script>
+    document.documentElement.classList.add('js');
+    try { const t = localStorage.getItem('cp-theme'); if (t === 'light') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000000; --surface: #0B0B0C; --raised: #18181B; --line: rgba(255,255,255,.09); --text: #F5F5F4; --muted: #A1A1AA; --faint: #71717A;
+      --page-dot: rgba(255,255,255,.16); --demo-bg: #0E0E10; --demo-dot: rgba(255,255,255,.07); --pane: #121214; --stage: #0C0C0E;
+      --skel: var(--skel); --skel-2: #3F3F46; --skel-3: #52525B; --ink: var(--ink); --ink-strong: #F4F4F5; --code-text: #A1A1AA;
+      --accent-text: #FDBA74; --accent-strong: var(--accent-strong); --teal-text: #5EEAD4;
+      --sw-on: #888888; --sw-off: #333333; --sw-sep: #222222;
+      --accent: #F97316; --accent-2: #FB7185; --teal: #0D9488;
+      --mono: "SF Mono", Menlo, Monaco, "Cascadia Code", ui-monospace, monospace;
+      --sans: var(--mono);
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #FAFAF9; --surface: #FFFFFF; --raised: #FFFFFF; --line: #E7E5E4; --text: #1C1917; --muted: #78716C; --faint: #A8A29E;
+      --page-dot: rgba(28,25,23,.13); --demo-bg: #F5F5F4; --demo-dot: #E0DDD9; --pane: #FFFFFF; --stage: #FAFAF9;
+      --skel: #E7E5E4; --skel-2: #D6D3D1; --skel-3: #A8A29E; --ink: #44403C; --ink-strong: #1C1917; --code-text: #57534E;
+      --accent-text: #C2410C; --accent-strong: #C2410C; --teal-text: #0F766E;
+      --sw-on: #78716C; --sw-off: #C9C5C2; --sw-sep: #E0DDD9;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.65 var(--sans); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    a { color: inherit; }
+    body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: radial-gradient(var(--page-dot) 1px, transparent 1.4px); background-size: 22px 22px;
+      -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 25%, #000 25%, transparent 85%);
+      mask-image: radial-gradient(ellipse 90% 75% at 50% 25%, #000 25%, transparent 85%); }
+    body::after { content: ""; position: absolute; left: 50%; top: -260px; width: min(1000px, 140vw); height: 620px; z-index: -1;
+      transform: translateX(-50%); pointer-events: none;
+      background: radial-gradient(closest-side, rgba(249,115,22,.20), rgba(251,113,133,.08) 55%, transparent); }
+    body { position: relative; overflow-x: hidden; }
+
+    /* two widths: a narrow reading column and a wider one for the cards */
+    .col { max-width: 560px; margin: 0 auto; padding: 0 24px; }
+    .wide { max-width: 940px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── corner switchers (theme / language) ── */
+    /* lined up with the hero's text column (.col) */
+    .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 10; max-width: 560px; margin: 0 auto; display: flex;
+      justify-content: space-between; align-items: center; padding: 40px 24px 0; }
+    .toggle-group { display: flex; align-items: center; gap: 6px; font: 14px/24px var(--mono); }
+    .toggle-group button { padding: 0; border: none; background: none; font: 10px/15px var(--mono); text-align: center; color: var(--sw-off);
+      cursor: pointer; transition: color .15s cubic-bezier(.4, 0, .2, 1); }
+    .toggle-group button:hover, .toggle-group button[aria-pressed="true"] { color: var(--sw-on); }
+    .toggle-group button:focus-visible { outline: 1px solid var(--sw-on); outline-offset: 3px; border-radius: 2px; }
+    .toggle-group .sep { color: var(--sw-sep); }
+
+    /* ── hero ── */
+    .hero { padding-top: 96px; padding-bottom: 56px; }
+    .mark { display: block; width: 44px; height: 44px; margin-bottom: 28px; filter: drop-shadow(0 8px 18px rgba(249,115,22,.3)); }
+    h1 { margin: 0 0 14px; font-size: 40px; line-height: 1.1; letter-spacing: -.03em; font-weight: 700; }
+    .grad { background: linear-gradient(120deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lead { max-width: 440px; margin: 0; color: var(--muted); font-size: 15px; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 30px; }
+    .btn { display: inline-flex; align-items: center; padding: 11px 20px; border-radius: 9px; font-weight: 600; font-size: 14px;
+      text-decoration: none; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 24px -10px rgba(249,115,22,.6); transition: transform .15s, box-shadow .15s; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(249,115,22,.65); }
+    .text-link { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .15s; }
+    .text-link:hover { color: var(--text); }
+    .rise { animation: rise .6s ease-out both; }
+    .d1 { animation-delay: .08s; } .d2 { animation-delay: .16s; } .d3 { animation-delay: .24s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+    /* ── sections ── */
+    .section { padding-top: 56px; padding-bottom: 56px; }
+    .label { margin: 0 0 8px; font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+    h2 { margin: 0 0 24px; font-size: 22px; line-height: 1.3; letter-spacing: -.015em; }
+    .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+    .js .reveal.in { opacity: 1; transform: none; }
+    .divider { height: 1px; margin: 0; border: 0; background: linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent); }
+
+    /* ── feature cards ── */
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .card { padding: 10px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);
+      transition: border-color .2s, box-shadow .2s; }
+    .card:hover { border-color: rgba(249,115,22,.4); box-shadow: 0 18px 40px -26px rgba(249,115,22,.45); }
+    .card h3 { margin: 14px 6px 2px; font-size: 14px; }
+    .card p { margin: 0 6px 6px; color: var(--muted); font-size: 13px; }
+
+    /* ── animated demos (pure CSS) ── */
+    .demo { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 10px; border: 1px solid var(--line);
+      background-color: var(--demo-bg); background-image: radial-gradient(var(--demo-dot) 1px, transparent 1px); background-size: 14px 14px; }
+    .p { position: absolute; }
+
+    /* demo 1: pick */
+    .mock-card { left: 12%; top: 12%; width: 44%; height: 76%; background: var(--raised); border: 1px solid var(--line); border-radius: 10px;
+      box-shadow: 0 8px 20px -12px rgba(0,0,0,.25); }
+    .mock-img { left: 15.5%; top: 17%; width: 37%; height: 32%; border-radius: 6px; background: linear-gradient(135deg, #FED7AA, #FBCFE8); }
+    .mock-line { left: 15.5%; height: 4.5%; border-radius: 99px; background: var(--skel-2); }
+    .l1 { top: 54%; width: 26%; background: var(--ink); }
+    .l2 { top: 62%; width: 33%; }
+    .mock-btn { left: 15.5%; top: 71%; width: 17%; height: 9%; border-radius: 6px; background: var(--ink-strong); }
+    .hl { left: 11%; top: 10.5%; width: 46%; height: 79%; border: 2px solid var(--teal); border-radius: 7px; animation: hl 6s ease-in-out infinite; }
+    .hl span { position: absolute; top: -22px; left: -2px; padding: 4px 6px; border-radius: 5px; white-space: nowrap;
+      font: 600 10px/1 var(--mono); color: #fff; background: var(--teal); animation: hl-tag 6s ease-in-out infinite; }
+    @keyframes hl {
+      0%, 14%  { left: 14.5%; top: 52%;   width: 29%; height: 8.5%;  border-color: var(--accent); background: rgba(249,115,22,.08); }
+      22%, 34% { left: 14.5%; top: 69.5%; width: 19%; height: 12.5%; border-color: var(--accent); background: rgba(249,115,22,.08); }
+      44%, 56% { left: 11%;   top: 10.5%; width: 46%; height: 79%;   border-color: var(--accent); background: rgba(249,115,22,.08); }
+      60%, 90% { left: 11%;   top: 10.5%; width: 46%; height: 79%;   border-color: var(--teal);   background: rgba(13,148,136,.08); }
+      100%     { left: 14.5%; top: 52%;   width: 29%; height: 8.5%;  border-color: var(--accent); background: rgba(249,115,22,.08); }
+    }
+    @keyframes hl-tag { 0%, 56% { background: var(--accent); } 60%, 90% { background: var(--teal); } 100% { background: var(--accent); } }
+    .mini-toast { left: 61%; top: 24%; width: 33%; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; border-radius: 10px;
+      background: var(--raised); border: 1px solid var(--line); box-shadow: 0 16px 30px -16px rgba(0,0,0,.35); opacity: 0;
+      animation: toast 6s ease-in-out infinite; }
+    .mini-toast b { width: 100%; font-size: 11px; }
+    .chip { padding: 4px 6px; border-radius: 99px; font: 600 9px/1 var(--mono); font-style: normal; background: var(--skel); color: var(--muted); }
+    .bar { display: block; width: 100%; height: 14px; margin-top: 4px; border-radius: 5px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    @keyframes toast { 0%, 58% { opacity: 0; transform: translateY(8px); } 64%, 90% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; transform: translateY(8px); } }
+
+    /* demo 2: multi-select */
+    .tile { top: 18%; width: 24%; height: 46%; border-radius: 10px; background: var(--raised); border: 1px solid var(--line); }
+    .tile::before { content: ""; position: absolute; left: 12%; right: 12%; top: 12%; height: 40%; border-radius: 6px; background: var(--skel); }
+    .tile::after { content: ""; position: absolute; left: 12%; width: 55%; top: 64%; height: 8%; border-radius: 99px; background: var(--skel-3); }
+    .t1 { left: 10%; } .t2 { left: 38%; } .t3 { left: 66%; }
+    .t1::before { background: linear-gradient(135deg, #FED7AA, #FDBA74); }
+    .t3::before { background: linear-gradient(135deg, #CCFBF1, #99F6E4); }
+    .sel, .hov { top: 16%; width: 26%; height: 50%; border-radius: 12px; opacity: 0; }
+    .sel { border: 2px solid var(--teal); background: rgba(13,148,136,.08); }
+    .hov { border: 2px dashed var(--accent); background: rgba(249,115,22,.06); }
+    .hov span { position: absolute; top: -20px; left: -2px; padding: 4px 6px; border-radius: 5px; font: 600 10px/1 var(--mono); color: #fff; background: var(--accent); }
+    .s1 { left: 9%; animation: s1 6s infinite; }
+    .h3, .s3 { left: 65%; }
+    .h3 { animation: h3 6s infinite; }
+    .s3 { animation: s3 6s infinite; }
+    @keyframes s1 { 0%, 10% { opacity: 0; } 14%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    @keyframes h3 { 0%, 30% { opacity: 0; } 34%, 44% { opacity: 1; } 47%, 100% { opacity: 0; } }
+    @keyframes s3 { 0%, 46% { opacity: 0; } 48%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+    .key { left: 50%; bottom: 9%; padding: 7px 12px; border-radius: 7px; font: 600 12px/1 var(--mono); color: var(--text);
+      background: var(--raised); border: 1px solid var(--line); box-shadow: 0 3px 0 var(--line); transform: translateX(-50%); animation: key 6s infinite; }
+    @keyframes key {
+      0%, 26%   { transform: translateX(-50%); box-shadow: 0 3px 0 var(--line); background: var(--raised); color: var(--text); }
+      30%, 48%  { transform: translate(-50%, 2px); box-shadow: 0 1px 0 var(--line); background: rgba(249,115,22,.18); color: var(--accent-text); }
+      52%, 100% { transform: translateX(-50%); box-shadow: 0 3px 0 var(--line); background: var(--raised); color: var(--text); }
+    }
+    .count { right: 6%; top: 6%; padding: 5px 8px; border-radius: 99px; font: 600 10px/1 var(--mono); color: var(--teal-text);
+      background: rgba(13,148,136,.16); border: 1px solid rgba(45,212,191,.35); opacity: 0; animation: count 6s infinite; }
+    @keyframes count { 0%, 50% { opacity: 0; } 55%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+
+    /* demo 3: raw → clean */
+    .pane { left: 8%; right: 8%; top: 12%; bottom: 12%; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px;
+      border-radius: 12px; background: var(--pane); border: 1px solid var(--line); box-shadow: 0 12px 26px -18px rgba(0,0,0,.35); }
+    .pane em { margin-bottom: 6px; font: 600 10px/1 var(--mono); font-style: normal; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+    .pane code { font: 11.5px/1.5 var(--mono); white-space: pre; color: var(--code-text); background: none; border: 0; padding: 0; }
+    .clean code s { text-decoration: none; color: var(--accent-text); }
+    .raw { animation: raw 6s infinite; }
+    .clean { opacity: 0; animation: clean 6s infinite; }
+    @keyframes raw { 0%, 38% { opacity: 1; filter: none; } 50%, 94% { opacity: 0; filter: blur(4px); } 100% { opacity: 1; } }
+    @keyframes clean { 0%, 50% { opacity: 0; transform: translateY(6px); } 58%, 92% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+    .sweep { top: 12%; bottom: 12%; left: -25%; width: 22%;
+      background: linear-gradient(90deg, transparent, rgba(251,113,133,.25), rgba(249,115,22,.3), transparent); animation: sweep 6s infinite; }
+    @keyframes sweep { 0%, 36% { left: -25%; } 54%, 100% { left: 105%; } }
+    .working { left: 50%; bottom: 4%; padding: 5px 9px; border-radius: 99px; transform: translateX(-50%); font: 600 10px/1 var(--mono);
+      color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); opacity: 0; animation: working 6s infinite; }
+    @keyframes working { 0%, 34% { opacity: 0; } 38%, 52% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+    /* demo 4: preview + code */
+    .split { left: 6%; right: 6%; top: 10%; bottom: 10%; display: grid; grid-template-columns: 1fr 1.1fr; overflow: hidden;
+      border-radius: 12px; background: var(--pane); border: 1px solid var(--line); box-shadow: 0 12px 26px -18px rgba(0,0,0,.35); }
+    .stage { display: grid; place-items: center; background: var(--stage); }
+    .pv-card { width: 64%; padding: 10%; display: grid; gap: 8px; border-radius: 10px; background: var(--raised); border: 1px solid var(--line);
+      box-shadow: 0 8px 18px -12px rgba(0,0,0,.3); }
+    .pv-card i { display: block; height: 42px; border-radius: 6px; background: linear-gradient(135deg, #FED7AA, #FBCFE8); }
+    .pv-card b { display: block; width: 70%; height: 7px; border-radius: 99px; background: var(--ink); }
+    .pv-card u { display: block; width: 50%; height: 14px; border-radius: 5px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    .code { padding: 34px 12px 14px; display: flex; flex-direction: column; gap: 7px; border-left: 1px solid var(--line); }
+    .code i { display: block; height: 6px; border-radius: 99px; background: var(--skel); }
+    .code i:nth-child(3n+1) { background: #FDBA74; }
+    .code i:nth-child(4n) { background: #A5F3FC; }
+    .copy { right: 9%; top: 13%; padding: 6px 9px; border-radius: 6px; font: 600 10px/1 var(--sans); color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); overflow: hidden; }
+    .copy .c2 { position: absolute; inset: 0; display: grid; place-items: center; background: var(--teal); opacity: 0; animation: copied 6s infinite; }
+    @keyframes copied { 0%, 55% { opacity: 0; } 60%, 88% { opacity: 1; } 94%, 100% { opacity: 0; } }
+
+    /* ── install ── */
+    .install-steps { margin: 0 0 28px; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+    .install-steps li { counter-increment: s; position: relative; padding-left: 34px; font-size: 14px; }
+    .install-steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 22px; height: 22px; display: grid; place-items: center;
+      border-radius: 50%; background: var(--raised); border: 1px solid var(--line); font: 600 11px var(--mono); color: var(--muted); }
+    code { padding: 2px 6px; border-radius: 5px; font: 13px var(--mono); background: var(--raised); border: 1px solid var(--line); }
+
+    /* ── comparison ── */
+    .compare-head { max-width: 640px; margin-bottom: 26px; }
+    .compare-head h2 { margin: 0 0 10px; }
+    .compare-head p:not(.label) { margin: 0; color: var(--muted); font-size: 14px; }
+    .table { overflow: hidden; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+    .t-row { display: grid; grid-template-columns: 1fr 1.35fr 1.35fr; }
+    .t-row + .t-row { border-top: 1px solid var(--line); }
+    .t-head { min-height: 42px; align-items: center; font: 600 11px/1.5 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--faint); }
+    .t-head span { padding: 0 18px; }
+    .t-head span:last-child { color: var(--accent-strong); }
+    .t-row h3 { margin: 0; padding: 18px; font-size: 13px; font-weight: 600; line-height: 1.5; }
+    .t-cell { margin: 0; padding: 17px 18px 18px; border-left: 1px solid var(--line); font-size: 13px; line-height: 1.7; }
+    .t-cell.hand { color: var(--muted); }
+    .t-cell.scout { color: var(--text); background: linear-gradient(112deg, rgba(249,115,22,.13) 0%, rgba(249,115,22,0) 75%); }
+    @media (max-width: 720px) {
+      .t-head { display: none; }
+      .t-row { grid-template-columns: 1fr; }
+      .t-row h3 { padding-bottom: 6px; }
+      .t-cell { border-left: 0; border-top: 1px dashed var(--line); }
+      .t-cell::before { content: attr(data-label); display: block; margin-bottom: 4px; font: 600 11px/1.5 var(--sans);
+        text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+      .t-cell.scout::before { color: var(--accent-strong); }
+    }
+
+    /* ── get it ── */
+    .get { padding-top: 32px; }
+    .get-label { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+    .get-price { margin: 0 0 20px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+    .get-price span { font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+    .get-note { margin: 12px 0 0; font-size: 12px; color: var(--faint); }
+    .get-note a { color: var(--muted); }
+    .install-title { margin: 36px 0 12px; font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+
+    /* ── footer ── */
+    footer { padding-top: 28px; padding-bottom: 56px; font-size: 12px; color: var(--faint); }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; }
+    .foot-links a { color: var(--muted); text-decoration: none; }
+    .foot-links a:hover { color: var(--text); }
+
+    @media (max-width: 560px) {
+      .hero { padding-top: 64px; }
+      h1 { font-size: 34px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .js .reveal { opacity: 1; transform: none; }
+      .mini-toast, .s1, .s3, .count, .clean { opacity: 1; }
+      .raw { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ── corner switchers ── -->
+  <div class="topbar">
+    <span class="toggle-group" role="group" aria-label="Theme" data-i18n-attr="aria-label:themeLabel">
+      <button type="button" data-theme-set="dark" data-i18n="dark">DARK</button><span class="sep" aria-hidden="true">/</span><button type="button" data-theme-set="light" data-i18n="light">LIGHT</button>
+    </span>
+    <span class="toggle-group" role="group" aria-label="Language" data-i18n-attr="aria-label:langLabel">
+      <button type="button" data-lang-set="en" lang="en">EN</button><span class="sep" aria-hidden="true">/</span><button type="button" data-lang-set="es" lang="es">ES</button>
+    </span>
+  </div>
+
+  <main>
+    <!-- ── hero ── -->
+    <section class="hero col">
+      <img class="mark rise" src="logo.svg" alt="Capture Pro logo" data-i18n-attr="alt:logoAlt">
+      <h1 class="rise d1">Capture <span class="grad">Pro</span></h1>
+      <p class="lead rise d2" data-i18n="lead">Hover any element on any website, capture its HTML and CSS, and let Claude turn it into a clean, reusable component.</p>
+      <div class="actions rise d3">
+        <a class="btn" href="#install" data-i18n="ctaDownload">Download for Chrome</a>
+        <a class="text-link" href="#features" data-i18n="ctaSee">or see what it does →</a>
+      </div>
+    </section>
+
+    <!-- ── feature cards ── -->
+    <section class="section wide" id="features">
+      <div class="grid">
+        <article class="card reveal">
+          <div class="demo" aria-hidden="true">
+            <div class="p mock-card"></div>
+            <div class="p mock-img"></div>
+            <div class="p mock-line l1"></div>
+            <div class="p mock-line l2"></div>
+            <div class="p mock-btn"></div>
+            <div class="p hl"><span data-i18n="dClick">click to capture</span></div>
+            <div class="p mini-toast">
+              <b data-i18n="dCaptured">Element captured</b><i class="chip" data-i18n="dElements">14 elements</i><i class="chip" data-i18n="dRules">9 rules</i><span class="bar"></span>
+            </div>
+          </div>
+          <h3 data-i18n="f1Title">Point, click, captured</h3>
+          <p data-i18n="f1Text">Hover to preview, click to capture the element and everything inside it.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="demo" aria-hidden="true">
+            <div class="p tile t1"></div><div class="p tile t2"></div><div class="p tile t3"></div>
+            <div class="p sel s1"></div>
+            <div class="p hov h3"><span data-i18n="dAdd">+ add</span></div>
+            <div class="p sel s3"></div>
+            <kbd class="p key">Ctrl</kbd>
+            <div class="p count" data-i18n="dCount">2 elements captured</div>
+          </div>
+          <h3 data-i18n="f2Title">Pick several at once</h3>
+          <p data-i18n="f2Text">Hold Ctrl and click to combine separate parts of a page into one component.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="demo" aria-hidden="true">
+            <div class="p pane raw">
+              <em data-i18n="dRaw">raw capture</em>
+              <code>.n12 { /* 143×44 */</code>
+              <code>  min-width: auto;</code>
+              <code>  box-shadow: rgba(0,0,0,0) 0 0…</code>
+              <code>  transition: color .15s, bg…</code>
+              <code>  border: 1px solid rgb(212…</code>
+              <code>}</code>
+            </div>
+            <div class="p pane clean">
+              <em data-i18n="dClean">✦ clean component</em>
+              <code><s>.card__button</s> {</code>
+              <code>  <s>padding</s>: 11px 20px;</code>
+              <code>  <s>border-radius</s>: var(--radius);</code>
+              <code>  <s>background</s>: var(--accent);</code>
+              <code>}</code>
+            </div>
+            <div class="p sweep"></div>
+            <div class="p working" data-i18n="dWorking">Claude is cleaning it up…</div>
+          </div>
+          <h3 data-i18n="f3Title">Raw styles in, clean code out</h3>
+          <p data-i18n="f3Text">Claude renames classes, strips browser noise, and keeps hovers and animations.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="demo" aria-hidden="true">
+            <div class="p split">
+              <div class="stage"><div class="pv-card"><i></i><b></b><u></u></div></div>
+              <div class="code">
+                <i style="width:40%"></i><i style="width:72%"></i><i style="width:56%"></i><i style="width:84%"></i>
+                <i style="width:30%"></i><i style="width:64%"></i><i style="width:48%"></i><i style="width:76%"></i><i style="width:36%"></i>
+              </div>
+            </div>
+            <div class="p copy"><span data-i18n="dCopy">Copy code</span><span class="c2" data-i18n="dCopied">Copied ✓</span></div>
+          </div>
+          <h3 data-i18n="f4Title">Preview before you paste</h3>
+          <p data-i18n="f4Text">See it live next to its full, highlighted code, then copy it in one click.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── comparison ── -->
+    <section class="section wide" id="compare">
+      <div class="compare-head reveal">
+        <p class="label" data-i18n="cLabel">By hand vs Capture Pro</p>
+        <h2 data-i18n="cTitle">The same result, without digging through DevTools.</h2>
+        <p data-i18n="cText">Copying a design by hand means inspecting, copying rules one at a time, and cleaning up the mess. Capture Pro does the tedious part so you can focus on making it yours.</p>
+      </div>
+
+      <div class="table reveal">
+        <div class="t-row t-head" aria-hidden="true">
+          <span data-i18n="hNeed">What you need</span>
+          <span data-i18n="hHand">By hand in DevTools</span>
+          <span>Capture Pro</span>
+        </div>
+
+        <article class="t-row">
+          <h3 data-i18n="r1">Grabbing the right element</h3>
+          <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r1h">Right-click, Inspect, then hunt through nested tags to find the one you actually want.</p>
+          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r1s">Hover to see it highlighted, click to capture. ↑ ↓ grow or shrink the selection.</p>
+        </article>
+
+        <article class="t-row">
+          <h3 data-i18n="r2">Getting all the styles</h3>
+          <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r2h">Copy rules one by one from the Styles panel and guess which ones matter.</p>
+          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r2s">Reads the styles of every nested element and keeps only what differs from browser defaults.</p>
+        </article>
+
+        <article class="t-row">
+          <h3 data-i18n="r3">Hovers and animations</h3>
+          <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r3h">Easy to miss: they only appear when you toggle states or track down the @keyframes.</p>
+          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r3s">Captures :hover rules, ::before/::after decorations, and CSS animations from the page's own stylesheets.</p>
+        </article>
+
+        <article class="t-row">
+          <h3 data-i18n="r4">Readable, reusable code</h3>
+          <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r4h">Auto-generated class names and framework leftovers you have to rename and clean up yourself.</p>
+          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r4s">Claude renames classes, removes the noise, and adds CSS variables so it's ready to reuse.</p>
+        </article>
+
+        <article class="t-row">
+          <h3 data-i18n="r5">Checking the result</h3>
+          <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r5h">Paste into a file and refresh until it looks right.</p>
+          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r5s">Live preview next to the full highlighted code, then copy it in one click.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── get it ── -->
+    <section class="section col" id="install">
+      <hr class="divider">
+      <div class="get reveal">
+        <p class="get-label" data-i18n="gLabel">Free to use</p>
+        <p class="get-price" data-i18n="gPrice">$0 <span>· AI cleanup uses your own API key</span></p>
+        <!-- When the extension is on the Chrome Web Store, point this link to the store listing instead. -->
+        <a class="btn" href="https://github.com/alejandrocimentada/capture-pro/releases/latest/download/capture-pro.zip" data-i18n="gDownload">Download ZIP</a>
+        <p class="get-note" data-i18n="gNote">Chrome, Edge &amp; Brave (v116+) · <a href="https://github.com/alejandrocimentada/capture-pro/blob/main/INSTALL.md">Full install guide</a> · <a href="https://github.com/alejandrocimentada/capture-pro/blob/main/PRIVACY.md">Privacy</a></p>
+
+        <p class="install-title" data-i18n="iTitle">Install in developer mode</p>
+        <ol class="install-steps">
+          <li data-i18n="i1">Unzip the download into a folder you'll keep.</li>
+          <li data-i18n="i2">Open <code>chrome://extensions</code> and turn on <b>Developer mode</b>.</li>
+          <li data-i18n="i3">Click <b>Load unpacked</b> and select the unzipped folder.</li>
+          <li data-i18n="i4">Pin Capture Pro, then press <code>Alt+Shift+S</code> on any website.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── footer ── -->
+  <footer class="col">
+    <hr class="divider" style="margin-bottom: 24px;">
+    <div class="foot-links">
+      <a href="https://github.com/alejandrocimentada/capture-pro">GitHub</a>
+      <a href="#" data-i18n="builtBy">Built by Alejandro Cimentada</a>
+    </div>
+    <span>© 2026 Capture Pro</span>
+  </footer>
+
+  <script>
+    // Fade sections in as they scroll into view
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+    // ── Theme (dark / light) ──
+    const root = document.documentElement;
+    function setTheme(theme) {
+      if (theme === 'light') root.dataset.theme = 'light'; else delete root.dataset.theme;
+      document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === theme)));
+      try { localStorage.setItem('cp-theme', theme); } catch (e) {}
+    }
+    document.querySelectorAll('[data-theme-set]').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+    setTheme(root.dataset.theme === 'light' ? 'light' : 'dark');
+
+    // ── Language (EN / ES) ──
+    // English comes from the page itself; only the Spanish strings live here.
+    const ES = {
+      docTitle: 'Capture Pro · Copia cualquier diseño como HTML + CSS limpio',
+      themeLabel: 'Tema', langLabel: 'Idioma', dark: 'OSCURO', light: 'CLARO', logoAlt: 'Logo de Capture Pro',
+      lead: 'Pasa el cursor sobre cualquier elemento de cualquier sitio web, captura su HTML y CSS, y deja que Claude lo convierta en un componente limpio y reutilizable.',
+      ctaDownload: 'Descargar para Chrome', ctaSee: 'o mira lo que hace →',
+      dClick: 'clic para capturar', dCaptured: 'Elemento capturado', dElements: '14 elementos', dRules: '9 reglas',
+      dAdd: '+ añadir', dCount: '2 elementos capturados', dRaw: 'captura en bruto', dClean: '✦ componente limpio',
+      dWorking: 'Claude lo está limpiando…', dCopy: 'Copiar código', dCopied: 'Copiado ✓',
+      f1Title: 'Apunta, haz clic, capturado', f1Text: 'Pasa el cursor para previsualizar y haz clic para capturar el elemento con todo lo que contiene.',
+      f2Title: 'Elige varios a la vez', f2Text: 'Mantén Ctrl y haz clic para combinar distintas partes de una página en un solo componente.',
+      f3Title: 'Estilos en bruto, código limpio', f3Text: 'Claude renombra las clases, elimina el ruido del navegador y conserva los hovers y las animaciones.',
+      f4Title: 'Previsualiza antes de pegar', f4Text: 'Míralo en vivo junto a su código completo y resaltado, y cópialo con un clic.',
+      cLabel: 'A mano vs Capture Pro', cTitle: 'El mismo resultado, sin rebuscar en DevTools.',
+      cText: 'Copiar un diseño a mano significa inspeccionar, copiar reglas una a una y limpiar el desorden. Capture Pro hace la parte tediosa para que puedas centrarte en hacerlo tuyo.',
+      hNeed: 'Lo que necesitas', hHand: 'A mano en DevTools', byHand: 'A mano',
+      r1: 'Seleccionar el elemento correcto',
+      r1h: 'Clic derecho, Inspeccionar y luego buscar entre etiquetas anidadas hasta dar con la que quieres.',
+      r1s: 'Pasa el cursor para verlo resaltado y haz clic para capturarlo. ↑ ↓ amplían o reducen la selección.',
+      r2: 'Obtener todos los estilos',
+      r2h: 'Copiar reglas una a una desde el panel Styles y adivinar cuáles importan.',
+      r2s: 'Lee los estilos de cada elemento anidado y conserva solo lo que difiere de los valores por defecto del navegador.',
+      r3: 'Hovers y animaciones',
+      r3h: 'Fáciles de pasar por alto: solo aparecen al cambiar de estado o al buscar los @keyframes.',
+      r3s: 'Captura reglas :hover, decoraciones ::before/::after y animaciones CSS de las hojas de estilo de la propia página.',
+      r4: 'Código legible y reutilizable',
+      r4h: 'Nombres de clase autogenerados y restos del framework que tienes que renombrar y limpiar tú.',
+      r4s: 'Claude renombra las clases, quita el ruido y añade variables CSS para que esté listo para reutilizar.',
+      r5: 'Comprobar el resultado',
+      r5h: 'Pegarlo en un archivo y recargar hasta que se vea bien.',
+      r5s: 'Vista previa en vivo junto al código completo y resaltado; luego cópialo con un clic.',
+      gLabel: 'Uso gratuito', gPrice: '$0 <span>· la limpieza con IA usa tu propia clave de API</span>',
+      gDownload: 'Descargar ZIP', gNote: 'Chrome, Edge y Brave (v116+) · <a href="https://github.com/alejandrocimentada/capture-pro/blob/main/INSTALL.md">Guía de instalación</a> · <a href="https://github.com/alejandrocimentada/capture-pro/blob/main/PRIVACY.md">Privacidad</a>', iTitle: 'Instalar en modo desarrollador',
+      i1: 'Descomprime la descarga en una carpeta que vayas a conservar.',
+      i2: 'Abre <code>chrome://extensions</code> y activa el <b>Modo de desarrollador</b>.',
+      i3: 'Haz clic en <b>Cargar descomprimida</b> y selecciona la carpeta descomprimida.',
+      i4: 'Fija Capture Pro y pulsa <code>Alt+Shift+S</code> en cualquier sitio web.',
+      builtBy: 'Hecho por Alejandro Cimentada',
+    };
+
+    const textNodes = [...document.querySelectorAll('[data-i18n]')];
+    const attrNodes = [...document.querySelectorAll('[data-i18n-attr]')];
+    const attrOf = (n) => n.dataset.i18nAttr.split(':'); // "attribute:key"
+    const EN = { docTitle: document.title };
+    textNodes.forEach((n) => { EN[n.dataset.i18n] = n.innerHTML; });
+    attrNodes.forEach((n) => { const [attr, key] = attrOf(n); EN[key] = n.getAttribute(attr); });
+
+    function setLang(lang) {
+      const dict = lang === 'es' ? ES : EN;
+      textNodes.forEach((n) => { const v = dict[n.dataset.i18n]; if (v != null) n.innerHTML = v; });
+      attrNodes.forEach((n) => { const [attr, key] = attrOf(n); if (dict[key] != null) n.setAttribute(attr, dict[key]); });
+      document.title = dict.docTitle;
+      root.lang = lang;
+      document.querySelectorAll('[data-lang-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.langSet === lang)));
+      try { localStorage.setItem('cp-lang', lang); } catch (e) {}
+    }
+    document.querySelectorAll('[data-lang-set]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.langSet)));
+    let savedLang = 'en';
+    try { savedLang = localStorage.getItem('cp-lang') || 'en'; } catch (e) {}
+    setLang(savedLang);
+  </script>
+</body>
+</html>
