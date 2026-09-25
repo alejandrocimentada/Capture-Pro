@@ -208,7 +208,7 @@
     .t-row h3 { margin: 0; padding: 18px; font-size: 13px; font-weight: 600; line-height: 1.5; }
     .t-cell { margin: 0; padding: 17px 18px 18px; border-left: 1px solid var(--line); font-size: 13px; line-height: 1.7; }
     .t-cell.hand { color: var(--muted); }
-    .t-cell.scout { color: var(--text); background: linear-gradient(112deg, rgba(249,115,22,.13) 0%, rgba(249,115,22,0) 75%); }
+    .t-cell.capture { color: var(--text); background: linear-gradient(112deg, rgba(249,115,22,.13) 0%, rgba(249,115,22,0) 75%); }
     @media (max-width: 720px) {
       .t-head { display: none; }
       .t-row { grid-template-columns: 1fr; }
@@ -216,7 +216,7 @@
       .t-cell { border-left: 0; border-top: 1px dashed var(--line); }
       .t-cell::before { content: attr(data-label); display: block; margin-bottom: 4px; font: 600 11px/1.5 var(--sans);
         text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
-      .t-cell.scout::before { color: var(--accent-strong); }
+      .t-cell.capture::before { color: var(--accent-strong); }
     }
 
     /* ── get it ── */
@@ -362,31 +362,31 @@
         <article class="t-row">
           <h3 data-i18n="r1">Grabbing the right element</h3>
           <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r1h">Right-click, Inspect, then hunt through nested tags to find the one you actually want.</p>
-          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r1s">Hover to see it highlighted, click to capture. ↑ ↓ grow or shrink the selection.</p>
+          <p class="t-cell capture" data-label="Capture Pro" data-i18n="r1s">Hover to see it highlighted, click to capture. ↑ ↓ grow or shrink the selection.</p>
         </article>
 
         <article class="t-row">
           <h3 data-i18n="r2">Getting all the styles</h3>
           <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r2h">Copy rules one by one from the Styles panel and guess which ones matter.</p>
-          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r2s">Reads the styles of every nested element and keeps only what differs from browser defaults.</p>
+          <p class="t-cell capture" data-label="Capture Pro" data-i18n="r2s">Reads the styles of every nested element and keeps only what differs from browser defaults.</p>
         </article>
 
         <article class="t-row">
           <h3 data-i18n="r3">Hovers and animations</h3>
           <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r3h">Easy to miss: they only appear when you toggle states or track down the @keyframes.</p>
-          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r3s">Captures :hover rules, ::before/::after decorations, and CSS animations from the page's own stylesheets.</p>
+          <p class="t-cell capture" data-label="Capture Pro" data-i18n="r3s">Captures :hover rules, ::before/::after decorations, and CSS animations from the page's own stylesheets.</p>
         </article>
 
         <article class="t-row">
           <h3 data-i18n="r4">Readable, reusable code</h3>
           <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r4h">Auto-generated class names and framework leftovers you have to rename and clean up yourself.</p>
-          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r4s">Claude renames classes, removes the noise, and adds CSS variables so it's ready to reuse.</p>
+          <p class="t-cell capture" data-label="Capture Pro" data-i18n="r4s">Claude renames classes, removes the noise, and adds CSS variables so it's ready to reuse.</p>
         </article>
 
         <article class="t-row">
           <h3 data-i18n="r5">Checking the result</h3>
           <p class="t-cell hand" data-label="By hand" data-i18n-attr="data-label:byHand" data-i18n="r5h">Paste into a file and refresh until it looks right.</p>
-          <p class="t-cell scout" data-label="Capture Pro" data-i18n="r5s">Live preview next to the full highlighted code, then copy it in one click.</p>
+          <p class="t-cell capture" data-label="Capture Pro" data-i18n="r5s">Live preview next to the full highlighted code, then copy it in one click.</p>
         </article>
       </div>
     </section>
