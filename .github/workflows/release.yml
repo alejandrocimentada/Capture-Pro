@@ -25,13 +25,11 @@ jobs:
           fi
 
       - name: Package extension
-        # capture-pro.zip unzips to capture-pro/ with manifest.json directly inside
+        # Contents of extension/ (git-tracked files only) at the ZIP root, manifest.json on top
         run: |
-          mkdir -p build
-          cp -r extension build/capture-pro
-          (cd build && zip -r -X ../capture-pro.zip capture-pro)
+          git archive --format=zip -o capture-pro.zip HEAD:extension
           unzip -l capture-pro.zip
-          unzip -l capture-pro.zip | grep -q " capture-pro/manifest.json$"
+          unzip -l capture-pro.zip | grep -qE " manifest\.json$"
 
       - name: Upload to release
         env:
