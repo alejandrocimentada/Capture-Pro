@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches manifest version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          MANIFEST_VERSION="$(jq -r .version extension/manifest.json)"
+          echo "Tag: $TAG_VERSION  manifest.json: $MANIFEST_VERSION"
+          if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $MANIFEST_VERSION"
+            exit 1
+          fi
+
+      - name: Package extension
+        # capture-pro.zip unzips to capture-pro/ with manifest.json directly inside
+        run: |
+          mkdir -p build
+          cp -r extension build/capture-pro
+          (cd build && zip -r -X ../capture-pro.zip capture-pro)
+          unzip -l capture-pro.zip
+          unzip -l capture-pro.zip | grep -q " capture-pro/manifest.json$"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" capture-pro.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" capture-pro.zip \
+              --title "Capture Pro $GITHUB_REF_NAME" \
+              --notes "Install guide: [INSTALL.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/INSTALL.md)"
+          fi
